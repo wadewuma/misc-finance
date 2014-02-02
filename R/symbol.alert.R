@@ -2,7 +2,7 @@
 # (c) Copyright 2014 mkfs <https://github.com/mkfs>
 # R script for daily stock-symbol-alert cron job.
 # Usage:
-#   R --vanilla -e "source('/home/repo/misc-finance/R/symbol.alert.R'); ticker.email.alert('/home/me/symbol.alert.dat', 'me@gmail.com')"
+#   R --vanilla -e "source('/home/repo/misc-finance/R/symbol.alert.R'); symbol.alert('/home/me/symbol.alert.dat', 'me@gmail.com')"
 # Note that input file is tab-delimited with the following columns:
 #   Symbol	BuyAt	SellAt
 
