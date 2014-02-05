@@ -4,17 +4,20 @@
 
 library(RCurl)
 
+# URLs for Yahoo Finance CSV API
 url.yahoo.finance.base <- 'http://biz.yahoo.com/p/csv'
 url.yahoo.finance.sector <- paste(url.yahoo.finance.base, 's_conameu.csv', 
                                   sep='/')
+url.yahoo.industry.list <- 'http://biz.yahoo.com/ic/ind_index_alpha.htm'
 
+# Helper function to safely download data using Curl.
 yahoo.download.csv.as.df <- function(url, set.id=TRUE) {
   # NOTE: CSV has a NUL at the end
   csv <- rawToChar(getURLContent(url, binary=TRUE))
   read.csv(textConnection(csv))
 }
 
-# See: https://code.google.com/p/yahoo-finance-managed/wiki/csvSectorDownload
+# Return a dataframe of all sectors in Yahoo Finance.
 yahoo.sectors <- function() {
   df <- yahoo.download.csv.as.df(url.yahoo.finance.sector)
   # sector ID is "1-indexed rank by name in the sector list"
@@ -22,8 +25,11 @@ yahoo.sectors <- function() {
   return(df)
 }
 
+# Parse the list of industry IDs from the URL
+#   http://biz.yahoo.com/ic/ind_index_alpha.html
+# It is a mystery why Yahoo does not provide an API for this.
 yahoo.industry.ids <- function() {
-  html <- htmlParse('http://biz.yahoo.com/ic/ind_index_alpha.html')
+  html <- htmlParse(url.yahoo.industry.list)
   html.names <- as.vector(xpathSApply(html, "//td/a/font", xmlValue))
   html.urls <- as.vector(xpathSApply(html, "//td/a/font/../@href"))
   
@@ -48,8 +54,11 @@ yahoo.industry.ids <- function() {
   return(df)
 }
 
-
-# See: https://code.google.com/p/yahoo-finance-managed/wiki/csvIndustryDownload
+# Return a dataframe of industries in a sector. If sector is NULL,
+# this invokes yahoo.sector.industries.all(). Note that sector is 
+# an integer ID, as provided in the dataframe returned by yahoo.sectors().
+# The id.df parameter is a dataframe as returned by yahoo.industry.ids();
+# this allows the user to avoid calling yahoo.industry.ids() repeatedly.
 yahoo.sector.industries <- function( sector=NULL, id.df=NULL ) {
   if (is.null(id.df)) {
     id.df <- yahoo.industry.ids()
@@ -82,6 +91,8 @@ yahoo.sector.industries <- function( sector=NULL, id.df=NULL ) {
   return(df)
 }
 
+# Return a dataframe of all industries in all sectors.
+# See yahoo.sector.industres() for more detail.
 yahoo.sector.industries.all <- function(id.df=NULL) {
   sec.df <- yahoo.sectors()
   ind.df <- NULL
@@ -96,9 +107,13 @@ yahoo.sector.industries.all <- function(id.df=NULL) {
   return(ind.df)
 }
 
+# Return a dataframe of symbols in the specified industry.
+# Note that industry is a numeric ID as provided by the 
+# dataframe returned by yahoo.sector.industries().
 yahoo.industry.symbols <- function( industry ) {
   url <- paste(url.yahoo.finance.base, 
                paste(as.integer(industry), 'conameu.csv', sep=''), 
                sep='/')
   df <- yahoo.download.csv.as.df(url)
+  return(df)
 }
