@@ -3,6 +3,7 @@
 # Yahoo Finance interface.
 
 library(RCurl)
+library(XML)
 
 # URLs for Yahoo Finance CSV API
 url.yahoo.finance.base <- 'http://biz.yahoo.com/p/csv'
