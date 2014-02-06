@@ -11,15 +11,7 @@ url.finviz.screener <- 'http://finviz.com/screener.ashx?ft=4'
 # Naughty FinViz, checking UserAgent like that!
 finviz.user.agent <- 'Mozilla/5.0'
 
-finviz.get.symbol <- function(sym) {
-  url <- paste(url.finviz.base, '&t=', paste(sym, collapse=','), sep='')
-  csv <- getURLContent(url)
-  if ((! is.na(csv)) && length(csv) > 0 ) {
-    read.csv(textConnection(csv), header=TRUE)
-  } else {
-      c()
-  }
-}
+
 
 finviz.screener.options <- function() {
   html.raw <- getURLContent(url.finviz.screener, followlocation = TRUE, 
@@ -33,7 +25,7 @@ finviz.screener.options <- function() {
   return( htmlParse(html.raw) )
 }
 
-build.name.value.dataframe <- function(data.names, data.values) {
+build.name.value.dataframe <- function(data.names, data.values, prefix) {
   if (length(data.names) != length(data.values)) {
     warning(paste('Names has length', length(data.names),
                   'but Values has length', length(data.values)))
@@ -41,7 +33,7 @@ build.name.value.dataframe <- function(data.names, data.values) {
   }
   
   df <- data.frame(Name=character(length(data.names)), 
-                   Value=character(length(data.values)), 
+                   Symbol=character(length(data.values)), 
                    stringsAsFactors=FALSE)
   
   for (i in 1:length(data.names)) {
@@ -50,14 +42,14 @@ build.name.value.dataframe <- function(data.names, data.values) {
     if (nchar(val) == 0) next
     
     df[i,'Name'] = name
-    df[i,'Value'] = paste('sec', val, sep='_')
+    df[i,'Symbol'] = paste(prefix, val, sep='_')
   }
   
   # strip empty rows (i.e. "Any" option)
   return( df[nchar(df$Name) > 0,] )
 }
 
-finviz.extract.select.options <- function(id, html=NULL) {
+finviz.extract.select.options <- function(id, prefix, html=NULL) {
   
   if (is.null(html)) {
     html <- finviz.screener.options()
@@ -71,29 +63,58 @@ finviz.extract.select.options <- function(id, html=NULL) {
   path <- paste("//select[@id='", id, "']/option/@value", sep="")
   option.values <- xpathSApply(html, path)
   
-  return(build.name.value.dataframe(option.names, option.values))
+  return(build.name.value.dataframe(option.names, option.values, prefix))
 }
 
 finviz.sectors <- function(html=NULL) {
-  finviz.extract.select.options('fs_sec', html)
+  finviz.extract.select.options('fs_sec', 'sec', html)
 }
 
 finviz.industries <- function(html=NULL) {
-  finviz.extract.select.options('fs_ind', html)
+  finviz.extract.select.options('fs_ind', 'ind', html)
 }
 
 finviz.indexes <- function(html=NULL) {
-  finviz.extract.select.options('fs_idx', html)
+  finviz.extract.select.options('fs_idx', 'idx', html)
 }
 
 finviz.exchanges <- function(html=NULL) {
-  finviz.extract.select.options('fs_exch', html)
+  finviz.extract.select.options('fs_exch', 'exch', html)
 }
 
 finviz.locations <- function(html=NULL) {
-  finviz.extract.select.options('fs_geo', html)
+  finviz.extract.select.options('fs_geo', 'geo', html)
 }
 
 finviz.market.caps <- function(html=NULL) {
-  finviz.extract.select.options('fs_cap', html)
+  finviz.extract.select.options('fs_cap', 'cap', html)
+}
+
+finviz.query <- function(filters) {
+  url <- paste(url.finviz.base, '&f=', paste(filters, collapse=','), sep='')
+  csv <- getURLContent(url, followlocation = TRUE, timeout = 100, 
+                       useragent = finviz.user.agent)
+  if ((! is.na(csv)) && length(csv) > 0 ) {
+    read.csv(textConnection(csv), header=TRUE)
+  } else {
+    c()
+  }
+}
+
+finviz.sector.symbols <- function(industry.sym) {
+  finviz.query(sector.sym)
+}
+
+finviz.industry.symbols <- function(industry.sym) {
+  finviz.query(industry.sym)
+}
+
+finviz.get.symbol <- function(sym) {
+  url <- paste(url.finviz.base, '&t=', paste(sym, collapse=','), sep='')
+  csv <- getURLContent(url)
+  if ((! is.na(csv)) && length(csv) > 0 ) {
+    read.csv(textConnection(csv), header=TRUE)
+  } else {
+    c()
+  }
 }
