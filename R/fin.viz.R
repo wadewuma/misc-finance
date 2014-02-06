@@ -4,9 +4,11 @@
 
 library(RCurl)
 library(XML)
+library(png)
 
 # FinViz URLs
 url.finviz.base <- 'http://finviz.com/export.ashx?o=ticker'
+url.finviz.chart <- 'http://finviz.com/publish.ashx?'
 url.finviz.search <- 'http://finviz.com/search.ashx?'
 url.finviz.screener <- 'http://finviz.com/screener.ashx?ft=4'
 url.finviz.symbol <- 'http://finviz.com/quote.ashx?'
@@ -15,21 +17,25 @@ url.finviz.symbol <- 'http://finviz.com/quote.ashx?'
 finviz.user.agent <- 'Mozilla/5.0'
 
 
+# Helper function to download a page from FinViz with a spoofed UserAgent
+finviz.htmlParse <- function(url) {
+ html.raw <- getURLContent(url, followlocation = TRUE, timeout = 100, 
+                           useragent = finviz.user.agent)
+ if (is.na(html.raw) || length(html.raw) == 0) {
+   warning(paste("Read zero-length page from", url))
+   return(NULL)
+ }
+
+ htmlParse(html.raw)
+}
+
 # ------------------------------------------------------------------------
 # FILTERED QUERIES
 
 # Helper function to return the parsed HTML of the FinViz Screener
 # "All Filters" page.
 finviz.screener.filters <- function() {
-  html.raw <- getURLContent(url.finviz.screener, followlocation = TRUE, 
-                            timeout = 100, useragent = finviz.user.agent)
-  
-  if (is.na(html.raw) || length(html.raw) == 0) {
-    warning(paste("Read zero-length page from", url.finviz.screener))
-    return(NULL)
-  }
-  
-  return( htmlParse(html.raw) )
+  return( finviz.htmlParse(url.finviz.screener) )
 }
 
 # Helper function to build a Name|Symbol dataframe from two character vectors
@@ -165,14 +171,7 @@ finviz.get.symbol <- function(sym) {
 # Columns include Timestamp, URL, and Headline.
 finviz.symbol.news <- function(sym) {
   url <- paste(url.finviz.symbol, "t=", sym, sep='')
-  html.raw <- getURLContent(url, followlocation = TRUE, timeout = 100, 
-                            useragent = finviz.user.agent)
-  if (is.na(html.raw) || length(html.raw) == 0) {
-    warning(paste("Read zero-length page from", url.finviz.search))
-    return(NULL)
-  }
-  
-  html <- htmlParse(html.raw)
+  html <- finviz.htmlParse(url) 
   
   news.urls <- xpathSApply(html, 
                            "//table[@class='fullview-news-outer']/tr/td/a/@href")
@@ -187,6 +186,27 @@ finviz.symbol.news <- function(sym) {
   data.frame(Timestamp=news.ts, URL=news.urls, Headline=news.text)
 }
 
+
+# Display the FinViz chart for a symbol using the PNG package
+# The 'type' parameter can be 'l' (line), 'c' (candle)
+# The 'period' parameter can be 'd' (daily), 'w' (weekly), 'm' (monthly)
+# 'advanced' can be zero or one: it only is valid for daily charts.
+finviz.symbol.chart <- function(sym, period='d', type='c', advanced=TRUE) {
+  adv <- 0
+  if (advanced && period == 'd') adv <- 1
+  
+  opts <- paste('ty=', type, '&ta=', adv, '&p=', period, '&s=l', sep='')
+  url <- paste( url.finviz.chart, opts, "&t=", sym, sep='' )
+  html <- finviz.htmlParse(url) 
+  
+  img.url <- xpathSApply(html, 
+          "//table[@class='body-text']//input[@id='dynamic']/@value")
+  png <- getURLContent(img.url, binary=TRUE)
+  img <- readPNG(png)
+  
+  grid::grid.raster(img)
+}
+
 # ------------------------------------------------------------------------
 # COMPANY INFO
 
@@ -197,14 +217,7 @@ finviz.symbol.news <- function(sym) {
 # Multiple rows will be returned if more than one company matches.
 finviz.company.profile <- function(query) {
   url <- paste(url.finviz.search, "t=p&p=", query, sep='')
-  html.raw <- getURLContent(url, followlocation = TRUE, timeout = 100, 
-                            useragent = finviz.user.agent)
-  if (is.na(html.raw) || length(html.raw) == 0) {
-    warning(paste("Read zero-length page from", url.finviz.search))
-    return(NULL)
-  }
-  
-  html <- htmlParse(html.raw)
+  html <- finviz.htmlParse(url) 
   
   rows <- xpathSApply(html, "//table/tr/td/table/tr/td", xmlValue)
   num.results = length(rows) / 10
