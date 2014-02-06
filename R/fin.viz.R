@@ -16,6 +16,8 @@ url.finviz.symbol <- 'http://finviz.com/quote.ashx?'
 # Naughty FinViz, checking UserAgent like that!
 finviz.user.agent <- 'Mozilla/5.0'
 
+# Internal cached copy of screener filter options
+finviz.filter.options.cached <- NULL
 
 # Helper function to download a page from FinViz with a spoofed UserAgent
 finviz.htmlParse <- function(url) {
@@ -35,7 +37,10 @@ finviz.htmlParse <- function(url) {
 # Helper function to return the parsed HTML of the FinViz Screener
 # "All Filters" page.
 finviz.screener.filters <- function() {
-  return( finviz.htmlParse(url.finviz.screener) )
+  if ( is.null(finviz.filter.options.cached) ) {
+    finviz.filter.options.cached <- finviz.htmlParse(url.finviz.screener)
+  }
+  return( finviz.filter.options.cached )
 }
 
 # Helper function to build a Name|Symbol dataframe from two character vectors
@@ -66,13 +71,11 @@ build.name.symbol.dataframe <- function(data.names, data.values, prefix) {
 
 # Helper function to return a dataframe with the Name & Symbol of 
 # the specified filter options.
-finviz.extract.filter.options <- function(id, prefix, html=NULL) {
+finviz.extract.filter.options <- function(id, prefix) {
   
+  html <- finviz.screener.filters()
   if (is.null(html)) {
-    html <- finviz.screener.filters()
-    if (is.null(html)) {
-      return(c())
-    }
+    return(c())
   }
   
   path <- paste("//select[@id='", id, "']/option", sep="")
@@ -84,33 +87,33 @@ finviz.extract.filter.options <- function(id, prefix, html=NULL) {
 }
 
 # Return a dataframe with the Name & Symbol of all Sector filter options.
-finviz.sectors <- function(html=NULL) {
-  finviz.extract.filter.options('fs_sec', 'sec', html)
+finviz.sectors <- function() {
+  finviz.extract.filter.options('fs_sec', 'sec')
 }
 
 # Return a dataframe with the Name & Symbol of all Industry filter options.
-finviz.industries <- function(html=NULL) {
-  finviz.extract.filter.options('fs_ind', 'ind', html)
+finviz.industries <- function() {
+  finviz.extract.filter.options('fs_ind', 'ind')
 }
 
 # Return a dataframe with the Name & Symbol of all Index filter options.
-finviz.indexes <- function(html=NULL) {
-  finviz.extract.filter.options('fs_idx', 'idx', html)
+finviz.indexes <- function() {
+  finviz.extract.filter.options('fs_idx', 'idx')
 }
 
 # Return a dataframe with the Name & Symbol of all Exchange filter options.
-finviz.exchanges <- function(html=NULL) {
-  finviz.extract.filter.options('fs_exch', 'exch', html)
+finviz.exchanges <- function() {
+  finviz.extract.filter.options('fs_exch', 'exch')
 }
 
 # Return a dataframe with the Name & Symbol of all Location filter options.
-finviz.locations <- function(html=NULL) {
-  finviz.extract.filter.options('fs_geo', 'geo', html)
+finviz.locations <- function() {
+  finviz.extract.filter.options('fs_geo', 'geo')
 }
 
 # Return a dataframe with the Name & Symbol of all Market Cap filter options.
-finviz.market.caps <- function(html=NULL) {
-  finviz.extract.filter.options('fs_cap', 'cap', html)
+finviz.market.caps <- function() {
+  finviz.extract.filter.options('fs_cap', 'cap')
 }
 
 # Helper function to perform a query using the FinViz export URL.
