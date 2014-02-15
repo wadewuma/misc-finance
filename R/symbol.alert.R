@@ -79,7 +79,8 @@ symbol.alert.gmail <- function(filename, username, password, to.email=NULL,
   }
   
   email.data <- paste( paste('Subject:', symbol.alert.subject), '',
-                       symbol.alert.report(df), '', sep="\r\n" )
+                       paste(symbol.alert.report(df), collapse="\n"), '', 
+                       sep="\r\n" )
   
   if ( is.null(to.email) ) to.email <- username
   
