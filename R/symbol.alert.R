@@ -65,3 +65,37 @@ symbol.alert <- function(filename, email=NULL, verbose=FALSE) {
 
 	return(df)
 }
+
+# As with symbol.alert, but use Gmail via Curl to send email.
+# username doubles as both Gmail sign-in and From: email address.
+# If to.email is blank, username will be used.
+# Note: this requires the Curl command-line utility be installed and in PATH.
+symbol.alert.gmail <- function(filename, username, password, to.email=NULL,
+                               verbose=FALSE) {
+  df <- symbol.check.last(filename)
+  
+  if (nrow(df) == 0) {
+    return(df)
+  }
+  
+  email.data <- paste( paste('Subject:', symbol.alert.subject), '',
+                       symbol.alert.report(df), '', sep="\r\n" )
+  
+  if ( is.null(to.email) ) to.email <- username
+  
+  # Not the best validation: caller beware
+  username <- gsub('([^\\])(\\\\)*"', '\\1"', username)
+  password <- gsub('([^\\])(\\\\)*"', '\\1"', password)
+  to.email <- gsub('([^\\])(\\\\)*"', '\\1"', to.email)
+
+  cmd <- paste('curl -n --ssl-reqd --mail-from "<',
+               username,
+               '>" --mail-rcpt "<',
+               to.email,
+               '>" --url ',
+               'smtp://smtp.gmail.com:587',
+               ' --user "', username, ':', password, 
+               '" -T -', sep='')
+  
+  system(cmd, input=email.data, show.output.on.console=verbose)
+}
