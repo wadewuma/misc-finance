@@ -22,9 +22,6 @@ symbol.report <- function(sym, output.basename=NULL, format='html') {
     output.basename <- paste('SymbolReport', sym, sep='-')
   }
   
-  
-  
-  
   # prepare environment for KnitR with 'ticker.symbol' defined
   rpt.env <- new.env() 
   assign('ticker.symbol', sym, envir=rpt.env)
@@ -34,16 +31,18 @@ symbol.report <- function(sym, output.basename=NULL, format='html') {
   
   # Generate the Markdown
   output.path <- paste(output.basename, 'md', sep='.')
+  opts_knit$set(base.dir=dirname(output.path)) # don't lose image files!
   if (format == "html") {
     output.path <- paste(output.basename, 'html', sep='.')
     knit2html( symbol.report.template, output.path,
-               options=markdownHTMLOptions(default=TRUE),
+               options=c("use_xhtml", "smartypants", "base64_images",
+                         "mathjax", "highlight_code"),
                quiet=TRUE, envir=rpt.env )
     
   } else if (format == 'pdf') {
     output.path <- paste(output.basename, 'pdf', sep='.')
     knit2pdf( symbol.report.template, output.path,
-               quiet=TRUE, envir=rpt.env )    
+              quiet=TRUE, envir=rpt.env )    
   } else {
     knit( symbol.report.template, output.path, envir=rpt.env)
   }
