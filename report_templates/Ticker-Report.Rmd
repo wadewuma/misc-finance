@@ -1,0 +1,19 @@
+Title
+========================================================
+
+Misc code
+
+```{r}
+library(quantmod)
+sec <- yahoo.sectors()
+print(sec)
+sym <- getQuote(ticker.symbol)
+print(sym)
+```
+
+Example plot:
+
+```{r fig.width=7, fig.height=6}
+plot(runif(100))
+```
+

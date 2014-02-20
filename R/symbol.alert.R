@@ -38,6 +38,7 @@ symbol.alert.server <- 'ASPMX.L.GOOGLE.COM'	# SMTP server: gmail
 # Generate a report for dataframe of stock alerts. This just captures the
 # result of printing a dataframe.
 symbol.alert.report <- function(df) {
+	# Note: format() could be use, but that will not strip row names
 	capture.output(print(df, row.names=FALSE))
 }
 
