@@ -21,9 +21,9 @@ symbol.report <- function(sym, output.basename=NULL, format='html') {
   if (is.null(output.basename)) {
     output.basename <- paste('SymbolReport', sym, sep='-')
   }
-  output.md <- paste(output.basename, 'md', sep='.')
-  output.html <- paste(output.basename, 'html', sep='.')
-  output.pdf <- paste(output.basename, 'pdf', sep='.')
+  
+  
+  
   
   # prepare environment for KnitR with 'ticker.symbol' defined
   rpt.env <- new.env() 
@@ -33,18 +33,21 @@ symbol.report <- function(sym, output.basename=NULL, format='html') {
                     'yahoo.finance.R', sep='/'), envir=rpt.env)
   
   # Generate the Markdown
-  knit( symbol.report.template, output.md, envir=rpt.env)
-  rv = output.md
-  
-  # HTML output
+  output.path <- paste(output.basename, 'md', sep='.')
   if (format == "html") {
-    markdownToHTML(output.md, output.html)
-    rv = output.html
+    output.path <- paste(output.basename, 'html', sep='.')
+    knit2html( symbol.report.template, output.path,
+               options=markdownHTMLOptions(default=TRUE),
+               quiet=TRUE, envir=rpt.env )
+    
   } else if (format == 'pdf') {
-    # TODO: html-to-pdf
-    rv = output.pdf
+    output.path <- paste(output.basename, 'pdf', sep='.')
+    knit2pdf( symbol.report.template, output.path,
+               quiet=TRUE, envir=rpt.env )    
+  } else {
+    knit( symbol.report.template, output.path, envir=rpt.env)
   }
-  return(rv)
+  return(output.path)
 }
 
 # View a report in the RStudio viewer pane or a local browser
