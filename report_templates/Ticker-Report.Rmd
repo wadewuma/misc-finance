@@ -1,14 +1,21 @@
-Title
+```{r echo=FALSE}
+sym.details <- yahoo.symbol.details(ticker.symbol)
+sym.yahoo <- yahoo.symbol.quote(ticker.symbol)
+```
+`r ticker.symbol`
 ========================================================
+
+**Company** `r sym.yahoo['Name']`  
+**Sector** `r sym.details['Sector']`  
+**Industry** `r sym.details['Industry']`  
 
 Misc code
 
-```{r}
+```{r echo=FALSE}
 library(quantmod)
-sec <- yahoo.sectors()
-print(sec)
-sym <- getQuote(ticker.symbol)
-print(sym)
+
+sym.quote <- getQuote(ticker.symbol)
+print(sym.quote)
 ```
 
 Example plot:
