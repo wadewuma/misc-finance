@@ -118,3 +118,22 @@ yahoo.industry.symbols <- function( industry ) {
   df <- yahoo.download.csv.as.df(url)
   return(df)
 }
+
+# Return a character vector of details for the specified symbol.
+# This vector consists of the following (named) elements, in order:
+# Index Membership, Sector, Industry, Full Time Employees
+yahoo.symbol.details <- function( sym ) {
+  url <- paste('http://finance.yahoo.com/q/pr?s=', sym, sep='')
+  html <- htmlParse(url)
+  keys <- xpathSApply(html, 
+              "//table[@class='yfnc_datamodoutline1']//td[@class='yfnc_tablehead1']", xmlValue)
+  vals <- xpathSApply(html, 
+              "//table[@class='yfnc_datamodoutline1']//td[@class='yfnc_tabledata1']", xmlValue)
+  
+  keys <- gsub(':', '', keys)
+  vals <- gsub('([[:lower:]])([[:upper:]])', '\\1; \\2', vals)
+  
+  vec <- vals[1:4]
+  names(vec) <- keys[1:4]
+  return(vec)
+}

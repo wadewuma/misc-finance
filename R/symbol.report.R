@@ -67,3 +67,7 @@ symbol.report.view <- function(sym) {
   }
   viewer(html.path)
 }
+
+#http://www.nyse.com/indexes/nyaindex.csv
+#"INDEX COMPOSITION DATA FOR NYSE COMPOSITE INDEX (SYMBOL NYA) AS OF 02/24/2012","","","","","","",""
+#"NAME","TICKER","COUNTRY","ICB","INDUS","SUP SEC","SEC","SUB SEC"
