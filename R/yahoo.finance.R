@@ -4,15 +4,31 @@
 
 library(RCurl)
 library(XML)
+library(rjson)
 
 # URLs for Yahoo Finance CSV API
 url.yahoo.finance.base <- 'http://biz.yahoo.com/p/csv'
 url.yahoo.finance.sector <- paste(url.yahoo.finance.base, 's_conameu.csv', 
                                   sep='/')
-url.yahoo.industry.list <- 'http://biz.yahoo.com/ic/ind_index_alpha.htm'
+url.yahoo.industry.list <- 'http://biz.yahoo.com/ic/ind_index_alpha.html'
 url.yahoo.quote.base <- 'http://download.finance.yahoo.com/d/quotes.csv?s='
+url.yahoo.symbol.search <- 'http://d.yimg.com/autoc.finance.yahoo.com/autoc?callback=YAHOO.Finance.SymbolSuggest.ssCallback&query='
+
 #http://download.finance.yahoo.com/d/quotes.csv?s=%40%5EDJI,GOOG&f=nsl1op
 
+#yahoo.user.agent <- 'Mozilla/5.0'
+yahoo.user.agent <-  'Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:26.0) Gecko/20100101 Firefox/26.0'
+
+yahoo.htmlParse <- function(url) {
+  html.raw <- getURLContent(url, followlocation = TRUE, timeout = 100, 
+                            useragent = yahoo.user.agent, binary=TRUE)
+  if (is.na(html.raw) || length(html.raw) == 0) {
+    warning(paste("Read zero-length page from", url))
+    return(NULL)
+  }
+  htmlParse(html.raw)
+}
+  
 # Helper function to safely download data using Curl.
 yahoo.download.csv.as.df <- function(url, set.id=TRUE) {
   # NOTE: CSV has a NUL at the end
@@ -31,7 +47,7 @@ yahoo.sectors <- function() {
 # Parse the list of industry IDs from the URL
 #   http://biz.yahoo.com/ic/ind_index_alpha.html
 # It is a mystery why Yahoo does not provide an API for this.
-yahoo.industry.ids <- function() {
+yahoo.industries <- function() {
   html <- htmlParse(url.yahoo.industry.list)
   html.names <- as.vector(xpathSApply(html, "//td/a/font", xmlValue))
   html.urls <- as.vector(xpathSApply(html, "//td/a/font/../@href"))
@@ -60,11 +76,11 @@ yahoo.industry.ids <- function() {
 # Return a dataframe of industries in a sector. If sector is NULL,
 # this invokes yahoo.sector.industries.all(). Note that sector is 
 # an integer ID, as provided in the dataframe returned by yahoo.sectors().
-# The id.df parameter is a dataframe as returned by yahoo.industry.ids();
-# this allows the user to avoid calling yahoo.industry.ids() repeatedly.
+# The id.df parameter is a dataframe as returned by yahoo.industries();
+# this allows the user to avoid calling yahoo.industries() repeatedly.
 yahoo.sector.industries <- function( sector=NULL, id.df=NULL ) {
   if (is.null(id.df)) {
-    id.df <- yahoo.industry.ids()
+    id.df <- yahoo.industries()
   }
   
   if (is.null(sector)) {
@@ -110,10 +126,11 @@ yahoo.sector.industries.all <- function(id.df=NULL) {
   return(ind.df)
 }
 
-# Return a dataframe of symbols in the specified industry.
+# Return a dataframe of companies in the specified industry.
 # Note that industry is a numeric ID as provided by the 
 # dataframe returned by yahoo.sector.industries().
-yahoo.industry.symbols <- function( industry ) {
+# WARNING: This returns company name, not symbol
+yahoo.industry.companies <- function( industry ) {
   url <- paste(url.yahoo.finance.base, 
                paste(as.integer(industry), 'conameu.csv', sep=''), 
                sep='/')
@@ -186,4 +203,27 @@ yahoo.symbol.quote <- function(sym) {
                        col.names=names(yahoo.symbol.quote.fields))
   rownames(df.quote) <- df.quote$Symbol
   return(df.quote)
+}
+
+yahoo.symbol.for.company <- function(name) {
+  url <- paste(url.yahoo.symbol.search, curlEscape(name), sep='')
+  str <- rawToChar(getURLContent(url, binary=TRUE))
+  str <- gsub('YAHOO.Finance.SymbolSuggest.ssCallback\\((.*)\\)$', '\\1', 
+              str)
+  lst <- fromJSON(str)
+  rs <- lst$ResultSet$Result
+  if (length(rs) < 1) {
+    return("")
+  }
+  return(rs[[1]]$symbol)
+}
+
+yahoo.symbol.industry.syms <- function(sym) {
+  sym.details <- yahoo.symbol.details(sym)
+  ind <- yahoo.industries()
+  ind.id <- ind[ind$Name == sym.details['Industry'],]$ID
+  ind.comps <- yahoo.industry.companies(ind.id)
+  syms <- sapply(ind.comps$Description[2:nrow(ind.comps)], 
+                 yahoo.symbol.for.company)
+  return(syms[syms != "" & syms != sym])
 }
