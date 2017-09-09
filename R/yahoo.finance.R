@@ -19,9 +19,9 @@ url.yahoo.symbol.search <- 'http://d.yimg.com/autoc.finance.yahoo.com/autoc?call
 #yahoo.user.agent <- 'Mozilla/5.0'
 yahoo.user.agent <-  'Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:26.0) Gecko/20100101 Firefox/26.0'
 
-yahoo.htmlParse <- function(url) {
+yahoo.htmlParse <- function(url, binary=TRUE) {
   html.raw <- getURLContent(url, followlocation = TRUE, timeout = 100, 
-                            useragent = yahoo.user.agent, binary=TRUE)
+                            useragent = yahoo.user.agent, binary=binary)
   if (is.na(html.raw) || length(html.raw) == 0) {
     warning(paste("Read zero-length page from", url))
     return(NULL)
@@ -140,21 +140,38 @@ yahoo.industry.companies <- function( industry ) {
 
 # Return a character vector of details for the specified symbol.
 # This vector consists of the following (named) elements, in order:
-# Index Membership, Sector, Industry, Full Time Employees
+# Sector, Industry, Full Time Employees
 yahoo.symbol.details <- function( sym ) {
-  url <- paste('http://finance.yahoo.com/q/pr?s=', sym, sep='')
-  html <- htmlParse(url)
-  keys <- xpathSApply(html, 
-              "//table[@class='yfnc_datamodoutline1']//td[@class='yfnc_tablehead1']", xmlValue)
-  vals <- xpathSApply(html, 
-              "//table[@class='yfnc_datamodoutline1']//td[@class='yfnc_tabledata1']", xmlValue)
+  url <- paste('http://finance.yahoo.com/quote/', sym, '/profile?p=', sym,
+	       sep='')
+  html <- yahoo.htmlParse(url, FALSE)
+  vec <- as.vector(xpathSApply(html, "//div[@class='asset-profile-container']//*[self::span or self::strong]", xmlValue))
+  keys <- character()
+  vals <- character()
+  for (i in seq(from=1, to=(length(vec)-1), by=2)) {
+    keys <- c(keys, vec[i])
+    vals <- c(vals, vec[i+1])
+  }
   
-  keys <- gsub(':', '', keys)
-  vals <- gsub('([[:lower:]])([[:upper:]])', '\\1; \\2', vals)
+  names(vals) <- keys
+  return(vals)
+}
+
+# Return a character vector of stats for the specified symbol.
+yahoo.symbol.stats <- function( sym ) {
+  url <- paste('http://finance.yahoo.com/quote/', sym, '/key-statistics?p=', 
+	       sym, sep='')
+  html <- yahoo.htmlParse(url, FALSE)
+  vec <- as.vector(xpathSApply(html, "//div[@id='Main']//td", xmlValue))
+  keys <- character()
+  vals <- character()
+  for (i in seq(from=1, to=(length(vec)-1), by=2)) {
+    keys <- c(keys, vec[i])
+    vals <- c(vals, vec[i+1])
+  }
   
-  vec <- vals[1:4]
-  names(vec) <- keys[1:4]
-  return(vec)
+  names(vals) <- keys
+  return(vals)
 }
 
 # Fields that can be supplied to Yahoo Quotes
